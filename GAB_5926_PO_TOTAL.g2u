@@ -1,0 +1,180 @@
+Program.Sub.ScreenSU.Start
+Gui.F_PO..Create
+Gui.F_PO..Caption("PO Total")
+Gui.F_PO..Size(18405,5475)
+Gui.F_PO..MinX(0)
+Gui.F_PO..MinY(0)
+Gui.F_PO..Position(0,0)
+Gui.F_PO..FontSize(9)
+Gui.F_PO..BackColor(-2147483633)
+Gui.F_PO..MousePointer(0)
+Gui.F_PO..Event(UnLoad,Unload)
+Gui.F_PO.GsGCSummary.Create(GsGridControl)
+Gui.F_PO.GsGCSummary.Size(18045,4755)
+Gui.F_PO.GsGCSummary.Position(60,45)
+Program.Sub.ScreenSU.End
+
+Program.Sub.Preflight.Start
+Program.Sub.Preflight.End
+
+Program.Sub.Main.Start
+F.Intrinsic.Control.If(V.Caller.Hook,=,16850)
+	V.Passed.000072.Set("Total PO")
+F.Intrinsic.Control.ElseIf(V.Caller.Hook,=,16910)
+	Function.ODBC.Connection!conx.OpenCompanyConnection(300)
+	
+	F.Intrinsic.Control.CallSub(LoadPO)
+	
+	F.ODBC.Connection!conx.Close
+	
+	Gui.F_PO.GsGCSummary.Anchor(15)
+	Gui.F_PO..Show
+F.Intrinsic.Control.EndIf
+Program.Sub.Main.End
+
+Program.Sub.LoadPO.Start
+V.Local.sCaption.Declare
+V.Local.sCurrCo.Declare
+V.Local.sCurrVen.Declare
+V.Local.sPO.Declare
+V.Local.sQuery.Declare
+
+F.ODBC.Connection!conx.OpenLocalRecordsetRO("rst","SELECT CURRENCY FROM V_COMPANY_OPT")
+V.Local.sCurrCo.Set(V.ODBC.conx!rst.FieldValTrim!currency)
+F.ODBC.conx!rst.Close
+
+V.Local.sCurrVen.Set(V.Passed.000062)
+
+V.Local.sPO.Set(V.Passed.000008)
+F.Intrinsic.String.LPad(V.Local.sPO,"0",7,V.Local.sPO)
+
+F.Intrinsic.String.Build("select record_no as Line, Part, Location as Loc, qty_order as Quantity, um_purchasing as UM, (1-discount)*exchange_cost2 as VenCost, ven_tax_per_piece as VenTax, ((1-discount)*exchange_cost2)+ven_tax_per_piece as VenCostTax, (1-discount)*(qty_order*exchange_cost2) as VenExt, qty_order*(((1-discount)*exchange_cost2)+ven_tax_per_piece) as VenExtTax, (1-discount)*cost_6_dec as CoCost, pur_tax_per_piece as CoTax, ((1-discount)*cost_6_dec)+pur_tax_per_piece as CoCostTax, (1-discount)*(qty_order*cost_6_dec) as CoExt, qty_order*(((1-discount)*cost_6_dec)+pur_tax_per_piece) as CoExtTax, Description, ' ' as ExtraDesc,  rtrim(purchase_order)+rtrim(record_no) as PK from v_po_lines where purchase_order = '{0}' order by record_no",V.Local.sPO.Trim,V.Local.sQuery)
+F.Data.DataTable.CreateFromSQL("dtPO","Conx",V.Local.sQuery,True)
+
+F.Data.Dictionary.CreateFromSQL("dicPO","Conx","select rtrim(po_num)+rtrim(line), text from V_PO_ln_text")
+F.Data.Dictionary.SetDefaultReturn("dicPO","")
+F.Data.DataTable.FillFromDictionary("dtPO","dicPO","PK","ExtraDesc")
+F.Data.Dictionary.Close("dicPO")
+
+Gui.F_PO.GsGCSummary.AddGridviewFromDatatable("gvPO","dtPO")
+Gui.F_PO.GsGCSummary.MainView("gvPO")
+
+Gui.F_PO.GsGCSummary.SetGridviewProperty("gvPO","OptionsViewRowAutoHeight",True)
+
+Gui.F_PO.GsGCSummary.SetColumnProperty("gvPO","ExtraDesc","Caption","Extra Description")
+F.Intrinsic.string.Build("Unit Cost in {0}",V.Local.sCurrCo,V.Local.sCaption)
+Gui.F_PO.GsGCSummary.SetColumnProperty("gvPO","CoCost","Caption",V.Local.sCaption)
+F.Intrinsic.string.Build("Unit Tax in {0}",V.Local.sCurrCo,V.Local.sCaption)
+Gui.F_PO.GsGCSummary.SetColumnProperty("gvPO","CoTax","Caption",V.Local.sCaption)
+F.Intrinsic.string.Build("Net Cost in {0}",V.Local.sCurrCo,V.Local.sCaption)
+Gui.F_PO.GsGCSummary.SetColumnProperty("gvPO","CoCostTax","Caption",V.Local.sCaption)
+F.Intrinsic.string.Build("Ext. in {0}",V.Local.sCurrCo,V.Local.sCaption)
+Gui.F_PO.GsGCSummary.SetColumnProperty("gvPO","CoExt","Caption",V.Local.sCaption)
+F.Intrinsic.string.Build("Net Ext. in {0}",V.Local.sCurrCo,V.Local.sCaption)
+Gui.F_PO.GsGCSummary.SetColumnProperty("gvPO","CoExtTax","Caption",V.Local.sCaption)
+Gui.F_PO.GsGCSummary.SetColumnProperty("gvPO","Line","HeaderHAlignment","Center")
+Gui.F_PO.GsGCSummary.SetColumnProperty("gvPO","Part","HeaderHAlignment","Center")
+Gui.F_PO.GsGCSummary.SetColumnProperty("gvPO","Description","HeaderHAlignment","Center")
+Gui.F_PO.GsGCSummary.SetColumnProperty("gvPO","ExtraDesc","HeaderHAlignment","Center")
+Gui.F_PO.GsGCSummary.SetColumnProperty("gvPO","Quantity","HeaderHAlignment","Center")
+Gui.F_PO.GsGCSummary.SetColumnProperty("gvPO","UM","HeaderHAlignment","Center")
+Gui.F_PO.GsGCSummary.SetColumnProperty("gvPO","CoCost","HeaderHAlignment","Center")
+Gui.F_PO.GsGCSummary.SetColumnProperty("gvPO","CoTax","HeaderHAlignment","Center")
+Gui.F_PO.GsGCSummary.SetColumnProperty("gvPO","CoCostTax","HeaderHAlignment","Center")
+Gui.F_PO.GsGCSummary.SetColumnProperty("gvPO","CoExt","HeaderHAlignment","Center")
+Gui.F_PO.GsGCSummary.SetColumnProperty("gvPO","CoExtTax","HeaderHAlignment","Center")
+Gui.F_PO.GsGCSummary.SetColumnProperty("gvPO","Line","CellHAlignment","Center")
+Gui.F_PO.GsGCSummary.SetColumnProperty("gvPO","UM","CellHAlignment","Center")
+Gui.F_PO.GsGCSummary.SetColumnProperty("gvPO","Quantity","DisplayCustomNumeric","##,###,##0.0000")
+Gui.F_PO.GsGCSummary.SetColumnProperty("gvPO","CoCost","DisplayCustomNumeric","##,###,##0.0000")
+Gui.F_PO.GsGCSummary.SetColumnProperty("gvPO","CoTax","DisplayCustomNumeric","##,###,##0.0000")
+Gui.F_PO.GsGCSummary.SetColumnProperty("gvPO","CoCostTax","DisplayCustomNumeric","##,###,##0.0000")
+Gui.F_PO.GsGCSummary.SetColumnProperty("gvPO","CoExt","DisplayCustomNumeric","##,###,##0.0000")
+Gui.F_PO.GsGCSummary.SetColumnProperty("gvPO","CoExtTax","DisplayCustomNumeric","##,###,##0.0000")
+Gui.F_PO.GsGCSummary.SetColumnProperty("gvPO","Line","MinWidth","45")
+Gui.F_PO.GsGCSummary.SetColumnProperty("gvPO","Part","MinWidth","120")
+Gui.F_PO.GsGCSummary.SetColumnProperty("gvPO","Description","MinWidth","200")
+Gui.F_PO.GsGCSummary.SetColumnProperty("gvPO","ExtraDesc","MinWidth","250")
+Gui.F_PO.GsGCSummary.SetColumnProperty("gvPO","Quantity","MinWidth","90")
+Gui.F_PO.GsGCSummary.SetColumnProperty("gvPO","UM","MinWidth","45")
+Gui.F_PO.GsGCSummary.SetColumnProperty("gvPO","CoCost","MinWidth","110")
+Gui.F_PO.GsGCSummary.SetColumnProperty("gvPO","CoTax","MinWidth","110")
+Gui.F_PO.GsGCSummary.SetColumnProperty("gvPO","CoCostTax","MinWidth","110")
+Gui.F_PO.GsGCSummary.SetColumnProperty("gvPO","CoExt","MinWidth","110")
+Gui.F_PO.GsGCSummary.SetColumnProperty("gvPO","CoExtTax","MinWidth","110")
+
+Gui.F_PO.GsGCSummary.SetColumnProperty("gvPO","Line","HeaderFontBold",True)
+Gui.F_PO.GsGCSummary.SetColumnProperty("gvPO","Part","HeaderFontBold",True)
+Gui.F_PO.GsGCSummary.SetColumnProperty("gvPO","Description","HeaderFontBold",True)
+Gui.F_PO.GsGCSummary.SetColumnProperty("gvPO","ExtraDesc","HeaderFontBold",True)
+Gui.F_PO.GsGCSummary.SetColumnProperty("gvPO","Quantity","HeaderFontBold",True)
+Gui.F_PO.GsGCSummary.SetColumnProperty("gvPO","UM","HeaderFontBold",True)
+Gui.F_PO.GsGCSummary.SetColumnProperty("gvPO","CoCost","HeaderFontBold",True)
+Gui.F_PO.GsGCSummary.SetColumnProperty("gvPO","CoTax","HeaderFontBold",True)
+Gui.F_PO.GsGCSummary.SetColumnProperty("gvPO","CoCostTax","HeaderFontBold",True)
+Gui.F_PO.GsGCSummary.SetColumnProperty("gvPO","CoExt","HeaderFontBold",True)
+Gui.F_PO.GsGCSummary.SetColumnProperty("gvPO","CoExtTax","HeaderFontBold",True)
+
+Gui.F_PO.GsGCSummary.SetColumnProperty("gvPO","Description","AllowEdit",False)
+Gui.F_PO.GsGCSummary.SetColumnProperty("gvPO","Loc","Visible",False)
+Gui.F_PO.GsGCSummary.SetColumnProperty("gvPO","PK","Visible",False)
+Gui.F_PO.GsGCSummary.SetColumnProperty("gvPO","Line","Fixed","Left")
+Gui.F_PO.GsGCSummary.SetColumnProperty("gvPO","ExtraDesc","CellWordWrap","Wrap")
+
+Gui.F_PO.GsGCSummary.AddSummaryItem("gvPO","CoExt","COEXTSUM","SUM","","","##,###,##0.00")
+Gui.F_PO.GsGCSummary.AddSummaryItem("gvPO","CoExtTax","COEXTTAXSUM","SUM","","","##,###,##0.00")
+
+F.Intrinsic.Control.If(V.Local.sCurrVen.Trim,=,V.Local.sCurrCo.Trim)
+	F.Data.DataTable.RemoveColumn("dtPO","VenCost")
+	F.Data.DataTable.RemoveColumn("dtPO","VenTax")
+	F.Data.DataTable.RemoveColumn("dtPO","VenCostTax")
+	F.Data.DataTable.RemoveColumn("dtPO","VenExt")
+	F.Data.DataTable.RemoveColumn("dtPO","VenExtTax")
+F.Intrinsic.Control.Else
+	F.Intrinsic.string.Build("Unit Cost in {0}",V.Local.sCurrVen,V.Local.sCaption)
+	Gui.F_PO.GsGCSummary.SetColumnProperty("gvPO","VenCost","Caption",V.Local.sCaption)
+	F.Intrinsic.string.Build("Unit Tax in {0}",V.Local.sCurrVen,V.Local.sCaption)
+	Gui.F_PO.GsGCSummary.SetColumnProperty("gvPO","VenTax","Caption",V.Local.sCaption)
+	F.Intrinsic.string.Build("Net Cost in {0}",V.Local.sCurrVen,V.Local.sCaption)
+	Gui.F_PO.GsGCSummary.SetColumnProperty("gvPO","VenCostTax","Caption",V.Local.sCaption)
+	F.Intrinsic.string.Build("Ext. in {0}",V.Local.sCurrVen,V.Local.sCaption)
+	Gui.F_PO.GsGCSummary.SetColumnProperty("gvPO","VenExt","Caption",V.Local.sCaption)
+	F.Intrinsic.string.Build("Net Ext. in {0}",V.Local.sCurrVen,V.Local.sCaption)
+	Gui.F_PO.GsGCSummary.SetColumnProperty("gvPO","VenExtTax","Caption",V.Local.sCaption)
+	
+	Gui.F_PO.GsGCSummary.SetColumnProperty("gvPO","VenCost","HeaderHAlignment","Center")
+	Gui.F_PO.GsGCSummary.SetColumnProperty("gvPO","VenTax","HeaderHAlignment","Center")
+	Gui.F_PO.GsGCSummary.SetColumnProperty("gvPO","VenCostTax","HeaderHAlignment","Center")
+	Gui.F_PO.GsGCSummary.SetColumnProperty("gvPO","VenExt","HeaderHAlignment","Center")
+	Gui.F_PO.GsGCSummary.SetColumnProperty("gvPO","VenExtTax","HeaderHAlignment","Center")
+	
+	Gui.F_PO.GsGCSummary.SetColumnProperty("gvPO","VenCost","DisplayCustomNumeric","##,###,##0.0000")
+	Gui.F_PO.GsGCSummary.SetColumnProperty("gvPO","VenTax","DisplayCustomNumeric","##,###,##0.0000")
+	Gui.F_PO.GsGCSummary.SetColumnProperty("gvPO","VenCostTax","DisplayCustomNumeric","##,###,##0.0000")
+	Gui.F_PO.GsGCSummary.SetColumnProperty("gvPO","VenExt","DisplayCustomNumeric","##,###,##0.0000")
+	Gui.F_PO.GsGCSummary.SetColumnProperty("gvPO","VenExtTax","DisplayCustomNumeric","##,###,##0.0000")
+	
+	Gui.F_PO.GsGCSummary.SetColumnProperty("gvPO","VenCost","MinWidth","110")
+	Gui.F_PO.GsGCSummary.SetColumnProperty("gvPO","VenTax","MinWidth","110")
+	Gui.F_PO.GsGCSummary.SetColumnProperty("gvPO","VenCostTax","MinWidth","110")
+	Gui.F_PO.GsGCSummary.SetColumnProperty("gvPO","VenExt","MinWidth","110")
+	Gui.F_PO.GsGCSummary.SetColumnProperty("gvPO","VenExtTax","MinWidth","110")
+	
+	Gui.F_PO.GsGCSummary.SetColumnProperty("gvPO","VenCost","HeaderFontBold",True)
+	Gui.F_PO.GsGCSummary.SetColumnProperty("gvPO","VenTax","HeaderFontBold",True)
+	Gui.F_PO.GsGCSummary.SetColumnProperty("gvPO","VenCostTax","HeaderFontBold",True)
+	Gui.F_PO.GsGCSummary.SetColumnProperty("gvPO","VenExt","HeaderFontBold",True)
+	Gui.F_PO.GsGCSummary.SetColumnProperty("gvPO","VenExtTax","HeaderFontBold",True)
+	
+	Gui.F_PO.GsGCSummary.AddSummaryItem("gvPO","VenExt","VENEXTSUM","SUM","","","##,###,##0.00")
+	Gui.F_PO.GsGCSummary.AddSummaryItem("gvPO","VenExtTax","VENEXTTAXSUM","SUM","","","##,###,##0.00")
+F.Intrinsic.Control.EndIf
+Program.Sub.LoadPO.End
+
+Program.Sub.Unload.Start
+F.Intrinsic.Control.If(V.DataTable.dtPO.Exists)
+	F.Data.DataTable.Close("dtPO")
+F.Intrinsic.Control.EndIf
+
+F.Intrinsic.Control.End
+Program.Sub.Unload.End
